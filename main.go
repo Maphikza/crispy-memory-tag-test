@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 )
 
 func main() {
@@ -23,42 +24,38 @@ func main() {
 		return
 	}
 
-	input := "This is a test string with john🔥 and TestUser mentioned."
-	inputLower := strings.ToLower(input) // Convert input to lowercase once
-
-	foundTags := findUserTags(inputLower, users)
-	fmt.Println("Tags found in the string:")
-	for _, tag := range foundTags {
-		fmt.Println(tag)
+	// Preprocess users to lowercase keys
+	lowercaseUsers := make(map[string]string)
+	for username, tag := range users {
+		lowercaseUsers[strings.ToLower(username)] = tag
 	}
 
-	username, tag := findUsernameInInput(inputLower, users)
-	if username != "" {
-		post := fmt.Sprintf("Just posted a tweet! Follow me %s %s", tag, username)
-		fmt.Println("Twitter-like Post:")
-		fmt.Println(post)
-	} else {
-		fmt.Println("No username found in the input string.")
+	input := "This is a test string with john, and TestUser mentioned."
+	inputLower := strings.ToLower(input)
+
+	foundResults := findUserTags(inputLower, lowercaseUsers)
+	fmt.Println("Exact tags and corresponding usernames found in the string:")
+	for tag, username := range foundResults {
+		fmt.Printf("Tag: %s, Username: %s\n", tag, username)
 	}
 
 	fmt.Printf("Time taken for the entire process: %s\n", time.Since(startTime))
 }
 
-func findUserTags(input string, users map[string]string) []string {
-	var tags []string
-	for username, tag := range users {
-		if strings.Contains(input, strings.ToLower(username)) {
-			tags = append(tags, tag)
-		}
-	}
-	return tags
-}
+func findUserTags(input string, users map[string]string) map[string]string {
+	results := make(map[string]string)
+	words := strings.Fields(input)
 
-func findUsernameInInput(input string, users map[string]string) (string, string) {
-	for username, tag := range users {
-		if strings.Contains(input, strings.ToLower(username)) {
-			return username, tag
+	for _, word := range words {
+		// Combine trimming and lowering case to minimize operations
+		trimmedWord := strings.ToLower(strings.TrimFunc(word, func(r rune) bool {
+			return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+		}))
+
+		if username, exists := users[trimmedWord]; exists {
+			results[username] = trimmedWord
 		}
 	}
-	return "", ""
+
+	return results
 }
